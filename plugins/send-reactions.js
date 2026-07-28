@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename);
 ffmpeg.setFfmpegPath(ffmpegPath.path);
 
 // ========== CONFIG ==========
-const USER_AGENT = 'jawad-best.js / 6.6.0';
+const USER_AGENT = 'jawi-best.js / 6.6.0';
 
 // ========== FETCH GIF FROM NEKOS.BEST ==========
 async function fetchGif(url) {
