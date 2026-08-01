@@ -1,4 +1,3 @@
-
 import { cmd } from '../command.js';
 import axios from 'axios';
 import fs from 'fs';
@@ -15,8 +14,31 @@ const __dirname = path.dirname(__filename);
 
 ffmpeg.setFfmpegPath(ffmpegPath.path);
 
-// ========== CONFIG ==========
-const USER_AGENT = 'jawi-best.js / 6.6.0';
+// ========== RANDOM NAME AND VERSION GENERATOR ==========
+function generateRandomName() {
+    const length = Math.floor(Math.random() * 6) + 5;
+    const letters = 'abcdefghijklmnopqrstuvwxyz';
+    let name = '';
+    
+    for (let i = 0; i < length; i++) {
+        const randomIndex = crypto.randomInt(0, letters.length);
+        name += letters[randomIndex];
+    }
+    
+    return `${name}.js`;
+}
+
+function generateRandomVersion() {
+    const major = crypto.randomInt(1, 10);
+    const minor = crypto.randomInt(0, 20);
+    const patch = crypto.randomInt(0, 50);
+    
+    return `${major}.${minor}.${patch}`;
+}
+
+const AGENT_NAME = generateRandomName();
+const AGENT_VERSION = generateRandomVersion();
+const USER_AGENT = `${AGENT_NAME}/${AGENT_VERSION}`;
 
 // ========== FETCH GIF FROM NEKOS.BEST ==========
 async function fetchGif(url) {
