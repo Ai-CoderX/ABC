@@ -11,7 +11,7 @@ const __dirname = dirname(__filename);
 // COMMAND: dl-session (Download Session Files)
 // ===============================
 cmd({
-    pattern: "dls",
+    pattern: "session",
     desc: "Download all session files as ZIP",
     category: "owner",
     react: "📁",
