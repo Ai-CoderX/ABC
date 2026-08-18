@@ -253,269 +253,6 @@ async (conn, mek, m, { from, reply, isCreator, args, prefix, updateUserConfig, u
 });
 
 // ===============================
-// BANLIST COMMAND
-// ===============================
-cmd({
-    pattern: "banlist",
-    alias: ["banlist", "banned"],
-    desc: "Show list of banned users",
-    category: "settings",
-    react: "📋",
-    filename: __filename
-},
-async (conn, mek, m, { from, reply, isCreator, args, prefix, updateUserConfig, userConfig, sanitizedNumber }) => {
-    if (!isCreator) {
-        return reply("*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*");
-    }
-
-    let bannedList = Array.isArray(userConfig.BANNED) ? userConfig.BANNED : [];
-
-    if (bannedList.length === 0) {
-        return reply("📋 *No banned users found.*");
-    }
-
-    let listText = "*📋 Banned Users List:*\n\n";
-    for (let i = 0; i < bannedList.length; i++) {
-        const user = bannedList[i];
-        const userNumber = extractNumber(user);
-        listText += `${i + 1}. ${userNumber}\n`;
-    }
-
-    await reply(listText);
-});
-
-// ===============================
-// BAN COMMAND
-// ===============================
-cmd({
-    pattern: "ban",
-    alias: ["ban"],
-    desc: "Ban a user from using the bot",
-    category: "settings",
-    react: "🔨",
-    filename: __filename
-},
-async (conn, mek, m, { from, reply, isCreator, args, updateUserConfig, userConfig, sanitizedNumber }) => {
-    if (!isCreator) {
-        return reply("*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*");
-    }
-
-    // Get target JID directly from mentioned or quoted
-    let target = m.mentionedJid?.[0] || (m.quoted?.sender ?? null);
-
-    // If args provided, check if it's a JID format
-    if (!target && args[0]) {
-        if (args[0].includes('@')) {
-            target = args[0];
-        } else {
-            return reply("⚠️ Please mention the user or reply to their message.\n\n*Usage:* .ban @user or reply to user's message");
-        }
-    }
-
-    if (!target) {
-        return reply("⚠️ Please provide a target to ban!\n\n*Usage:* .ban @user or reply to a message");
-    }
-
-    // Can't ban the bot itself
-    if (target === conn.user.id) {
-        return reply("🤖 I can't ban myself!");
-    }
-
-    // Can't ban the owner (use userConfig.OWNER_NUMBER)
-    const ownerJid = userConfig.OWNER_NUMBER || config.OWNER_NUMBER;
-    const ownerWithSuffix = ownerJid.includes('@') ? ownerJid : ownerJid + '@s.whatsapp.net';
-    if (target === ownerWithSuffix) {
-        return reply("👑 Cannot ban the owner!");
-    }
-
-    let bannedList = Array.isArray(userConfig.BANNED) ? [...userConfig.BANNED] : [];
-
-    if (bannedList.includes(target)) {
-        return reply("❌ This user is already banned!");
-    }
-
-    bannedList.push(target);
-    userConfig.BANNED = bannedList;
-    await updateUserConfig(sanitizedNumber, userConfig);
-    
-    await reply(`✅ *User banned successfully!*\n\nUser: ${target}`);
-});
-
-// ===============================
-// UNBAN COMMAND
-// ===============================
-cmd({
-    pattern: "unban",
-    alias: ["unban"],
-    desc: "Unban a user from using the bot",
-    category: "settings",
-    react: "🔓",
-    filename: __filename
-},
-async (conn, mek, m, { from, reply, isCreator, args, updateUserConfig, userConfig, sanitizedNumber }) => {
-    if (!isCreator) {
-        return reply("*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*");
-    }
-
-    // Get target JID directly from mentioned or quoted
-    let target = m.mentionedJid?.[0] || (m.quoted?.sender ?? null);
-
-    // If args provided, check if it's a JID format
-    if (!target && args[0]) {
-        if (args[0].includes('@')) {
-            target = args[0];
-        } else {
-            return reply("⚠️ Please mention the user or reply to their message.\n\n*Usage:* .unban @user or reply to user's message");
-        }
-    }
-
-    if (!target) {
-        return reply("⚠️ Please provide a target to unban!\n\n*Usage:* .unban @user or reply to a message");
-    }
-
-    let bannedList = Array.isArray(userConfig.BANNED) ? [...userConfig.BANNED] : [];
-
-    if (!bannedList.includes(target)) {
-        return reply("❌ This user is not banned!");
-    }
-
-    bannedList = bannedList.filter(jid => jid !== target);
-    userConfig.BANNED = bannedList;
-    await updateUserConfig(sanitizedNumber, userConfig);
-    
-    await reply(`✅ *User unbanned successfully!*\n\nUser: ${target}`);
-});
-
-// ===============================
-// SUDO COMMAND
-// ===============================
-cmd({
-    pattern: "sudo",
-    alias: ["sudo"],
-    desc: "Add a user to sudo list",
-    category: "settings",
-    react: "👑",
-    filename: __filename
-},
-async (conn, mek, m, { from, reply, isCreator, args, updateUserConfig, userConfig, sanitizedNumber }) => {
-    if (!isCreator) {
-        return reply("*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*");
-    }
-
-    // Get target JID directly from mentioned or quoted
-    let target = m.mentionedJid?.[0] || (m.quoted?.sender ?? null);
-
-    // If args provided, try to match with @lid format
-    if (!target && args[0]) {
-        // Check if args[0] is already a JID format (contains @)
-        if (args[0].includes('@')) {
-            target = args[0];
-        } else {
-            // Assume it's a number, but WhatsApp uses @lid now
-            return reply("⚠️ Please mention the user or reply to their message.\n\n*Usage:* .sudo @user or reply to user's message");
-        }
-    }
-
-    if (!target) {
-        return reply("⚠️ Please provide a target to add to sudo!\n\n*Usage:* .sudo @user or reply to a message");
-    }
-
-    // Check if trying to sudo the bot itself
-    if (target === conn.user.id) {
-        return reply("🤖 I can't sudo myself!");
-    }
-
-    let sudoList = Array.isArray(userConfig.SUDO) ? [...userConfig.SUDO] : [];
-
-    if (sudoList.includes(target)) {
-        return reply("❌ This user is already in sudo list!");
-    }
-
-    sudoList.push(target);
-    userConfig.SUDO = sudoList;
-    await updateUserConfig(sanitizedNumber, userConfig);
-    
-    await reply(`✅ *User added to sudo list successfully!*\n\nUser: ${target}`);
-});
-
-// ===============================
-// DELSUDO COMMAND
-// ===============================
-cmd({
-    pattern: "delsudo",
-    alias: ["delsudo", "removesudo"],
-    desc: "Remove a user from sudo list",
-    category: "settings",
-    react: "👑",
-    filename: __filename
-},
-async (conn, mek, m, { from, reply, isCreator, args, updateUserConfig, userConfig, sanitizedNumber }) => {
-    if (!isCreator) {
-        return reply("*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*");
-    }
-
-    // Get target JID directly from mentioned or quoted
-    let target = m.mentionedJid?.[0] || (m.quoted?.sender ?? null);
-
-    // If args provided, try to match with @lid format
-    if (!target && args[0]) {
-        if (args[0].includes('@')) {
-            target = args[0];
-        } else {
-            return reply("⚠️ Please mention the user or reply to their message.\n\n*Usage:* .delsudo @user or reply to user's message");
-        }
-    }
-
-    if (!target) {
-        return reply("⚠️ Please provide a target to remove from sudo!\n\n*Usage:* .delsudo @user or reply to a message");
-    }
-
-    let sudoList = Array.isArray(userConfig.SUDO) ? [...userConfig.SUDO] : [];
-
-    if (!sudoList.includes(target)) {
-        return reply("❌ This user is not in sudo list!");
-    }
-
-    sudoList = sudoList.filter(jid => jid !== target);
-    userConfig.SUDO = sudoList;
-    await updateUserConfig(sanitizedNumber, userConfig);
-    
-    await reply(`✅ *User removed from sudo list successfully!*\n\nUser: ${target}`);
-});
-
-// ===============================
-// LISTSUDO COMMAND
-// ===============================
-cmd({
-    pattern: "listsudo",
-    alias: ["listsudo", "sudoers"],
-    desc: "Show list of sudo users",
-    category: "settings",
-    react: "📋",
-    filename: __filename
-},
-async (conn, mek, m, { from, reply, isCreator, args, prefix, updateUserConfig, userConfig, sanitizedNumber }) => {
-    if (!isCreator) {
-        return reply("*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*");
-    }
-
-    let sudoList = Array.isArray(userConfig.SUDO) ? userConfig.SUDO : [];
-
-    if (sudoList.length === 0) {
-        return reply("📋 *No sudo users found.*");
-    }
-
-    let listText = "*📋 Sudo Users List:*\n\n";
-    for (let i = 0; i < sudoList.length; i++) {
-        const user = sudoList[i];
-        const userNumber = extractNumber(user);
-        listText += `${i + 1}. ${userNumber}\n`;
-    }
-
-    await reply(listText);
-});
-
-// ===============================
 // ANTIEDIT COMMAND
 // ===============================
 cmd({
@@ -564,7 +301,7 @@ async (conn, mek, m, { from, reply, isCreator, args, prefix, updateUserConfig, u
     }
 
     if (!args[0]) {
-        return reply(`📌 *Usᴀɢᴇ:* editpath inbox/same\n*Cᴜʀʀᴇɴᴛ ᴘᴀᴛʜ:* ${userConfig.ANTIEDIT_PATH || 'inbox'}\n\n*Oᴘᴛɪᴏɴs:*\n• inbox - Send edited message notification in inbox\n• same - Send edited message notification in the same chat`);
+        return reply(`📌 *Usᴀɢᴇ:* editpath inbox/same\n*Cᴜʀʀᴇɴᴛ ᴘᴀᴛʜ:* ${userConfig.ANTI_EDIT_PATH || 'inbox'}\n\n*Oᴘᴛɪᴏɴs:*\n• inbox - Send edited message notification in inbox\n• same - Send edited message notification in the same chat`);
     }
 
     const value = args[0].toLowerCase();
@@ -572,7 +309,7 @@ async (conn, mek, m, { from, reply, isCreator, args, prefix, updateUserConfig, u
         return reply('❌ *Pʟᴇᴀsᴇ ᴜsᴇ:* inbox ᴏʀ same');
     }
 
-    userConfig.ANTIEDIT_PATH = value;
+    userConfig.ANTI_EDIT_PATH = value;
     await updateUserConfig(sanitizedNumber, userConfig);
     
     await reply(`✅ *Eᴅɪᴛ ᴘᴀᴛʜ sᴇᴛ ᴛᴏ:* ${value}\n*Aɴᴛɪ-ᴇᴅɪᴛ sᴛᴀᴛᴜs:* ${userConfig.ANTI_EDIT || 'false'}`);
@@ -659,6 +396,57 @@ async (conn, mek, m, { from, reply, isCreator, args, updateUserConfig, userConfi
     await reply(responseMsg);
 });
 
+// ===============================
+// ANTI Status COMMAND - FIXED
+// ===============================
+cmd({
+    pattern: "antistatus",
+    alias: ["anti-status"],
+    desc: "Toggle Anti Status protection\n\n*Options:*\n• on - Enable Anti Status (warn + delete)\n• off - Disable Anti Status\n• warn - Only warn users\n• delete - Only delete messages",
+    category: "settings",
+    react: "🚫",
+    filename: __filename
+},
+async (conn, mek, m, { from, reply, isCreator, args, updateUserConfig, userConfig, sanitizedNumber }) => {
+    if (!isCreator) {
+        return reply("*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*");
+    }
+
+    if (!args[0]) {
+        return reply(`📌 *Usᴀɢᴇ:* antistatus on/off/warn/delete\n*Cᴜʀʀᴇɴᴛ:* ${userConfig.ANTI_STATUS === 'true' ? 'on' : userConfig.ANTI_STATUS === 'false' ? 'off' : userConfig.ANTI_STATUS || 'off'}\n\n*Oᴘᴛɪᴏɴs:*\n• on - Warn + delete Status\n• off - Disable Anti Status\n• warn - Only warn users\n• delete - Only delete messages`);
+    }
+
+    const value = args[0].toLowerCase();
+    if (value !== 'on' && value !== 'off' && value !== 'warn' && value !== 'delete') {
+        return reply("❌ Please use: on, off, warn, or delete");
+    }
+
+    // Convert 'on' to 'true', 'off' to 'false', keep 'warn' and 'delete' as is
+    let configValue;
+    let responseMsg = "";
+    
+    if (value === "on") {
+        configValue = "true";
+        responseMsg = "✅ Anti Status set to ON\n\nUsers sending Status will be warned and messages will be deleted.";
+    } else if (value === "off") {
+        configValue = "false";
+        responseMsg = "✅ Anti Status set to OFF\n\nNo Status protection active.";
+    } else if (value === "warn") {
+        configValue = "warn";
+        responseMsg = "✅ Anti Status set to WARN\n\nUsers will receive warnings when sending Status, but messages won't be deleted.";
+    } else if (value === "delete") {
+        configValue = "delete";
+        responseMsg = "✅ Anti Status set to DELETE\n\nStatus messages will be deleted without warning.";
+    }
+
+    userConfig.ANTI_STATUS = configValue;
+    await updateUserConfig(sanitizedNumber, userConfig);
+    
+    await reply(responseMsg);
+});
+
+
+    
 // ANTI DELETE COMMAND
 // ===============================
 cmd({
