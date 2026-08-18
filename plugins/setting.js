@@ -252,68 +252,6 @@ async (conn, mek, m, { from, reply, isCreator, args, prefix, updateUserConfig, u
     await reply(`✅ *Goodbye ᴍᴇssᴀɢᴇ sᴇᴛ ᴛᴏ:*\n\n${goodbyeMessage}`);
 });
 
-// ===============================
-// ANTIEDIT COMMAND
-// ===============================
-cmd({
-    pattern: "antiedit",
-    alias: ["antiedit"],
-    desc: "Toggle anti-edit feature (detects and shows edited messages)",
-    category: "settings",
-    react: "✏️",
-    filename: __filename
-},
-async (conn, mek, m, { from, reply, isCreator, args, prefix, updateUserConfig, userConfig, sanitizedNumber }) => {
-    if (!isCreator) {
-        return reply("*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*");
-    }
-
-    if (!args[0]) {
-        return reply(`📌 *Usᴀɢᴇ:* antiedit on/off\n*Cᴜʀʀᴇɴᴛ:* ${userConfig.ANTI_EDIT}\n\n*Eᴅɪᴛ Pᴀᴛʜ:* ${userConfig.ANTIEDIT_PATH || 'inbox'}\n\n*Tᴏ ᴄʜᴀɴɢᴇ ᴇᴅɪᴛ ᴘᴀᴛʜ ᴜsᴇ:*.editpath <inbox/same>`);
-    }
-
-    const value = args[0].toLowerCase();
-    if (value !== 'on' && value !== 'off') {
-        return reply('❌ *Pʟᴇᴀsᴇ ᴜsᴇ:* on ᴏʀ off');
-    }
-
-    const newValue = value === 'on' ? 'true' : 'false';
-    userConfig.ANTI_EDIT = newValue;
-    await updateUserConfig(sanitizedNumber, userConfig);
-    
-    await reply(`✅ *Aɴᴛɪ-ᴇᴅɪᴛ sᴇᴛ ᴛᴏ:* ${newValue}\n*Eᴅɪᴛ ᴘᴀᴛʜ:* ${userConfig.ANTIEDIT_PATH || 'inbox'}`);
-});
-
-// ===============================
-// EDITPATH COMMAND
-// ===============================
-cmd({
-    pattern: "editpath",
-    alias: ["editpath"],
-    desc: "Set where to show edited messages\n\n*Options:*\n• inbox - Send in inbox (default)\n• same - Send in the same chat where message was edited",
-    category: "settings",
-    react: "📍",
-    filename: __filename
-},
-async (conn, mek, m, { from, reply, isCreator, args, prefix, updateUserConfig, userConfig, sanitizedNumber }) => {
-    if (!isCreator) {
-        return reply("*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*");
-    }
-
-    if (!args[0]) {
-        return reply(`📌 *Usᴀɢᴇ:* editpath inbox/same\n*Cᴜʀʀᴇɴᴛ ᴘᴀᴛʜ:* ${userConfig.ANTI_EDIT_PATH || 'inbox'}\n\n*Oᴘᴛɪᴏɴs:*\n• inbox - Send edited message notification in inbox\n• same - Send edited message notification in the same chat`);
-    }
-
-    const value = args[0].toLowerCase();
-    if (value !== 'inbox' && value !== 'same') {
-        return reply('❌ *Pʟᴇᴀsᴇ ᴜsᴇ:* inbox ᴏʀ same');
-    }
-
-    userConfig.ANTI_EDIT_PATH = value;
-    await updateUserConfig(sanitizedNumber, userConfig);
-    
-    await reply(`✅ *Eᴅɪᴛ ᴘᴀᴛʜ sᴇᴛ ᴛᴏ:* ${value}\n*Aɴᴛɪ-ᴇᴅɪᴛ sᴛᴀᴛᴜs:* ${userConfig.ANTI_EDIT || 'false'}`);
-});
 
 // ===============================
 // AUTOREAD COMMAND
@@ -1120,8 +1058,7 @@ async (conn, mek, m, { from, reply, isCreator, prefix, userConfig }) => {
 │ • setgoodbye <message>
 │
 │ 📁 *Anti Features*
-│ • antiedit on/off
-│ • editpath inbox/same
+│ • antistatus on/off
 │ • antilink on/off/warn/delete
 │ • antidelete on/off
 │ • anticall on/off
@@ -1159,7 +1096,6 @@ async (conn, mek, m, { from, reply, isCreator, prefix, userConfig }) => {
 │ 📁 *Current Status*
 │ • Welcome: ${userConfig.WELCOME || 'false'}
 │ • Goodbye: ${userConfig.GOODBYE || 'false'}
-│ • Anti-Edit: ${userConfig.ANTI_EDIT || 'false'}
 │ • Anti-Link: ${userConfig.ANTI_LINK || 'off'}
 │ • Anti-Delete: ${userConfig.ANTI_DELETE || 'false'}
 │ • Anti-Call: ${userConfig.ANTI_CALL || 'false'}
