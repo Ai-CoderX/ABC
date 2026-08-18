@@ -108,7 +108,7 @@ async function sendMediaStatusToAllGroups(conn, mediaBuffer, mimeType, caption, 
 
 // ==================== GROUPSTATUS COMMAND ====================
 cmd({
-    pattern: "gcstatus",
+    pattern: "gcstatus2",
     desc: "Post group status with media or text (mentions all members)",
     category: "group",
     react: "📢",
@@ -167,7 +167,7 @@ cmd({
 
 
 cmd({
-    pattern: "groupstatus",
+    pattern: "gcstatus",
     alias: ["statusgc", "swgc"],
     desc: "Text or Media → ALL groups (Text: pure status | Media: chat + status)",
     category: "group",
