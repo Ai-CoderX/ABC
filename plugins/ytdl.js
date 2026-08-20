@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------
-//           JAWAD-MD - YOUTUBE DOWNLOADER
+//           KHAN-MD - YOUTUBE DOWNLOADER
 //---------------------------------------------------------------------------
 //  🚀 DOWNLOAD VIDEOS AND AUDIO USING JAWADTECH APIs
 //---------------------------------------------------------------------------
@@ -68,7 +68,7 @@ cmd({
 
         await conn.sendMessage(from, {
             image: { url: vid.thumbnail },
-            caption: `- *AUDIO DOWNLOADER 🎧*\n╭━━❐━⪼\n┇๏ *Title* - ${vid.title}\n┇๏ *Duration* - ${vid.timestamp}\n┇๏ *Views* - ${vid.views?.toLocaleString() || 'N/A'}\n┇๏ *Author* - ${vid.author?.name || 'Unknown'}\n┇๏ *Status* - Downloading...\n╰━━❑━⪼\n> Powered by JAWAD-MD`
+            caption: `- *AUDIO DOWNLOADER 🎧*\n╭━━❐━⪼\n┇๏ *Title* - ${vid.title}\n┇๏ *Duration* - ${vid.timestamp}\n┇๏ *Views* - ${vid.views?.toLocaleString() || 'N/A'}\n┇๏ *Author* - ${vid.author?.name || 'Unknown'}\n┇๏ *Status* - Downloading...\n╰━━❑━⪼\n> Powered by KHAN-MD`
         }, { quoted: mek });
 
         let audioUrl = null;
@@ -158,7 +158,7 @@ cmd({
 
         await conn.sendMessage(from, {
             image: { url: vid.thumbnail },
-            caption: `*🎬 VIDEO DOWNLOADER*\n\n🎞️ *Title:* ${vid.title}\n📺 *Channel:* ${vid.author?.name || 'Unknown'}\n🕒 *Duration:* ${vid.timestamp}\n\n*Status:* Downloading Video...\n\n> Powered by JAWAD-MD`
+            caption: `*🎬 VIDEO DOWNLOADER*\n\n🎞️ *Title:* ${vid.title}\n📺 *Channel:* ${vid.author?.name || 'Unknown'}\n🕒 *Duration:* ${vid.timestamp}\n\n*Status:* Downloading Video...\n\n> Powered by KHAN-MD`
         }, { quoted: mek });
 
         let videoUrl = null;
@@ -179,7 +179,7 @@ cmd({
                     if (videoUrl) {
                         await conn.sendMessage(from, {
                             video: { url: videoUrl },
-                            caption: `🎬 *${vid.title}*\n\n> Powered by JAWAD-MD`
+                            caption: `🎬 *${vid.title}*\n\n> Powered by KHAN-MD`
                         }, { quoted: mek });
                         success = true;
                         break;
@@ -204,7 +204,7 @@ cmd({
 });
 
 // ============================================
-// COMMAND: song (Interactive - Choose Audio/Video)
+// COMMAND: song (Interactive - Choose Audio/Video/Document)
 // ============================================
 cmd({
     pattern: "song",
@@ -248,9 +248,11 @@ cmd({
 *╭───⬡ ${toSmallCaps('Select Format')} ⬡───*
 *┋ ⬡ 1* 🎧 ${toSmallCaps('Audio (MP3)')}
 *┋ ⬡ 2* 📹 ${toSmallCaps('Video (MP4)')}
+*┋ ⬡ 3* 📄 ${toSmallCaps('Audio as Document')}
+*┋ ⬡ 4* 📄 ${toSmallCaps('Video as Document')}
 *╰───────────────────⊷*
 
-> Powered by JAWAD-MD`;
+> Powered by KHAN-MD`;
 
         const sent = await conn.sendMessage(from, {
             image: { url: vid.thumbnail },
@@ -270,8 +272,12 @@ cmd({
                 conn.ev.off("messages.upsert", songListener);
                 await conn.sendMessage(from, { react: { text: '⬇️', key: received.key } });
 
-                if (selected === "1" || selected === "2") {
-                    const type = selected === "1" ? "mp3" : "mp4";
+                // Clean up any special characters from selection
+                const cleanSelect = selected?.trim();
+
+                if (cleanSelect === "1" || cleanSelect === "2" || cleanSelect === "3" || cleanSelect === "4") {
+                    const type = cleanSelect === "1" || cleanSelect === "3" ? "mp3" : "mp4";
+                    const asDocument = cleanSelect === "3" || cleanSelect === "4";
 
                     if (type === "mp3") {
                         let audioUrl = null;
@@ -293,12 +299,23 @@ cmd({
                                     const response = await axios.get(apiUrl, { timeout: 15000 });
                                     audioUrl = response.data?.status && response.data?.download?.url ? response.data.download.url : null;
                                     if (audioUrl) {
-                                        await conn.sendMessage(from, {
-                                            audio: { url: audioUrl },
-                                            mimetype: "audio/mpeg",
-                                            fileName: `${vid.title}.mp3`,
-                                            ptt: false
-                                        }, { quoted: received });
+                                        if (asDocument) {
+                                            // Send as document
+                                            await conn.sendMessage(from, {
+                                                document: { url: audioUrl },
+                                                mimetype: "audio/mpeg",
+                                                fileName: `${vid.title}.mp3`,
+                                                caption: `📄 *${vid.title}*\n🎧 Audio Document\n\n> Powered by KHAN-MD`
+                                            }, { quoted: received });
+                                        } else {
+                                            // Send as audio
+                                            await conn.sendMessage(from, {
+                                                audio: { url: audioUrl },
+                                                mimetype: "audio/mpeg",
+                                                fileName: `${vid.title}.mp3`,
+                                                ptt: false
+                                            }, { quoted: received });
+                                        }
                                         success = true;
                                         break;
                                     }
@@ -331,10 +348,21 @@ cmd({
                                     const response = await axios.get(apiUrl, { timeout: 15000 });
                                     videoUrl = response.data?.status && response.data?.download?.url ? response.data.download.url : null;
                                     if (videoUrl) {
-                                        await conn.sendMessage(from, {
-                                            video: { url: videoUrl },
-                                            caption: `🎬 *${vid.title}*\n\n> Powered by JAWAD-MD`
-                                        }, { quoted: received });
+                                        if (asDocument) {
+                                            // Send as document
+                                            await conn.sendMessage(from, {
+                                                document: { url: videoUrl },
+                                                mimetype: "video/mp4",
+                                                fileName: `${vid.title}.mp4`,
+                                                caption: `📄 *${vid.title}*\n📹 Video Document\n\n> Powered by KHAN-MD`
+                                            }, { quoted: received });
+                                        } else {
+                                            // Send as video
+                                            await conn.sendMessage(from, {
+                                                video: { url: videoUrl },
+                                                caption: `🎬 *${vid.title}*\n\n> Powered by KHAN-MD`
+                                            }, { quoted: received });
+                                        }
                                         success = true;
                                         break;
                                     }
@@ -354,7 +382,7 @@ cmd({
                     await conn.sendMessage(from, { react: { text: '✅', key: received.key } });
                 } else {
                     await conn.sendMessage(from, {
-                        text: `❌ *Invalid selection!*\nPlease reply with:\n1️⃣ for Audio (MP3)\n2️⃣ for Video (MP4)`
+                        text: `❌ *Invalid selection!*\nPlease reply with:\n1️⃣ for Audio (MP3)\n2️⃣ for Video (MP4)\n3️⃣ for Audio as Document\n4️⃣ for Video as Document`
                     }, { quoted: received });
                 }
             }
@@ -364,7 +392,7 @@ cmd({
         
         setTimeout(() => {
             conn.ev.off("messages.upsert", songListener);
-        }, 20000);
+        }, 30000); // Increased timeout to 30 seconds
 
     } catch (e) {
         console.error(e);
@@ -414,7 +442,7 @@ async (conn, mek, m, { from, text, reply }) => {
         });
 
         mesaj += `*╭───⬡ ${toSmallCaps('Powered By')} ⬡───*\n`;
-        mesaj += `*┋ ⬡ ${toSmallCaps('JAWAD-MD')}*\n`;
+        mesaj += `*┋ ⬡ ${toSmallCaps('KHAN-MD')}*\n`;
         mesaj += `*╰───────────────────⊷*`;
         
         await conn.sendMessage(from, { text: mesaj.trim() }, { quoted: mek });
