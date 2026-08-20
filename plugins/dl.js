@@ -1,91 +1,97 @@
+//---------------------------------------------------------------------------
+//           JAWAD-MD - TWITTER DOWNLOADER
+//---------------------------------------------------------------------------
+//  🚀 DOWNLOAD TWITTER/X VIDEOS
+//---------------------------------------------------------------------------
+
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import { cmd } from '../command.js';
-import fs from 'fs-extra';
-import AdmZip from 'adm-zip';
+import axios from 'axios';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
-// ===============================
-// COMMAND: dl-session (Download Session Files)
-// ===============================
+// ============================================
+// COMMAND: twitter (Twitter/X Video Downloader)
+// ============================================
 cmd({
-    pattern: "session",
-    desc: "Download all session files as ZIP",
-    category: "owner",
-    react: "📁",
-    filename: __filename,
-    isOwner: true
-}, async (conn, mek, m, { from, reply, react }) => {
+    pattern: "twitter",
+    alias: ["tw"],
+    desc: "Download Twitter/X videos",
+    category: "download",
+    react: "🐦",
+    filename: __filename
+}, async (conn, mek, m, { from, text, reply }) => {
     try {
-        await react("⏳");
+        if (!text) return reply("🐦 Please provide a Twitter/X URL!\n\nExample: `.twitter https://x.com/username/status/123456789`");
 
-        const sessionPath = join(process.cwd(), 'session');
-        
-        // Check if session folder exists
-        if (!fs.existsSync(sessionPath)) {
-            return reply("❌ No session folder found!");
+        // Validate URL
+        if (!text.includes("twitter.com") && !text.includes("x.com")) {
+            return reply("❌ Please provide a valid Twitter/X URL!");
         }
 
-        // Get all session folders
-        const sessionFolders = fs.readdirSync(sessionPath).filter(f => 
-            f.startsWith('session_') && fs.statSync(join(sessionPath, f)).isDirectory()
-        );
-
-        if (sessionFolders.length === 0) {
-            return reply("❌ No session folders found!");
-        }
-
-        // Create temp directory
-        const tempDir = join(__dirname, '../temp');
-        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-
-        // Create ZIP file
-        const zip = new AdmZip();
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const zipName = `sessions_backup_${timestamp}.zip`;
-
-        // Add each session folder to ZIP
-        for (const folder of sessionFolders) {
-            const folderPath = join(sessionPath, folder);
-            const files = fs.readdirSync(folderPath);
-            
-            for (const file of files) {
-                const filePath = join(folderPath, file);
-                const fileContent = fs.readFileSync(filePath);
-                zip.addFile(`${folder}/${file}`, fileContent);
-            }
-        }
-
-        // Save ZIP
-        const zipPath = join(tempDir, zipName);
-        zip.writeZip(zipPath);
-
-        const stats = fs.statSync(zipPath);
-        const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
-
-        // Send ZIP file
+        // Send processing message
         await conn.sendMessage(from, {
-            document: fs.readFileSync(zipPath),
-            mimetype: 'application/zip',
-            fileName: zipName,
-            caption: `📁 *Session Backup*
+            react: { text: '⏳', key: m.key }
+        });
 
-• Sessions: ${sessionFolders.length}
-• Size: ${sizeMB} MB
-• Date: ${new Date().toLocaleString()}
+        // Clean URL and encode
+        const cleanUrl = text.trim();
+        const encodedUrl = encodeURIComponent(cleanUrl);
+        const apiUrl = `https://api.deline.web.id/downloader/twitter?url=${encodedUrl}`;
 
-> *Powered By KHAN-MD*`
+        // Fetch from API
+        const response = await axios.get(apiUrl, { 
+            timeout: 30000,
+            headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+        });
+
+        if (!response.data?.status) {
+            return reply("❌ Failed to fetch video! Please check the URL and try again.");
+        }
+
+        const data = response.data.data;
+        
+        if (!data.downloadLink) {
+            return reply("❌ No video found for this tweet!");
+        }
+
+        // Send video info
+        const caption = `╭┈───〔 Twitter Downloader 〕┈───⊷
+├▢ 🐦 Title: ${data.videoTitle || 'Twitter Video'}
+├▢ 📝 Description: ${data.videoDescription || 'N/A'}
+├▢ 📥 Status: Downloading...
+╰───────────────────⊷
+
+> Powered by JAWAD-MD`;
+
+        await conn.sendMessage(from, {
+            image: { url: data.imgUrl },
+            caption: caption
         }, { quoted: mek });
 
-        // Cleanup
-        fs.unlinkSync(zipPath);
-        await react("✅");
+        // Send the video
+        await conn.sendMessage(from, {
+            video: { url: data.downloadLink },
+            caption: `🐦 *${data.videoTitle || 'Twitter Video'}*\n\n> Powered by JAWAD-MD`,
+            mimetype: "video/mp4"
+        }, { quoted: mek });
+
+        await conn.sendMessage(from, { react: { text: '✅', key: m.key } });
 
     } catch (error) {
-        console.error("DL-Session Error:", error.message);
-        await react("❌");
-        reply(`❌ Failed to download session!\n\n${error.message}`);
+        console.error("❌ TWITTER ERROR:", error);
+        
+        if (error.code === 'ECONNABORTED') {
+            reply("⏰ Request timeout! Please try again later.");
+        } else if (error.response?.status === 404) {
+            reply("❌ Video not found! Please check the URL.");
+        } else {
+            reply(`❌ Error occurred: ${error.message}`);
+        }
+        
+        await conn.sendMessage(from, { react: { text: '❌', key: m.key } });
     }
 });
