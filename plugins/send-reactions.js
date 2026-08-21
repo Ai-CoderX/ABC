@@ -2137,7 +2137,7 @@ cmd({
     pattern: "tableflip",
     desc: "Send a tableflip reaction GIF.",
     category: "fun",
-    react: "(╯°□°)╯︵┻━┻",
+    react: "😶",
     filename: __filename,
     use: "@tag (optional)",
 }, async (conn, mek, m, { args, q, reply }) => {
