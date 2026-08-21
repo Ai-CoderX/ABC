@@ -11,7 +11,7 @@ cmd({
   pattern: "delete",
   desc: "Delete any message",
   react: "🗑️",
-  category: "admin",
+  category: "owner",
   filename: __filename
 }, async (conn, mek, m, { reply, quoted }) => {
   
