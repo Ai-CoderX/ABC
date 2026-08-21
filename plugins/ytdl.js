@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------
-//           KHAN-MD - YOUTUBE DOWNLOADER
+//           JAWAD-MD - YOUTUBE DOWNLOADER
 //---------------------------------------------------------------------------
 //  🚀 DOWNLOAD VIDEOS AND AUDIO USING JAWADTECH APIs
 //---------------------------------------------------------------------------
@@ -68,7 +68,7 @@ cmd({
 
         await conn.sendMessage(from, {
             image: { url: vid.thumbnail },
-            caption: `- *AUDIO DOWNLOADER 🎧*\n╭━━❐━⪼\n┇๏ *Title* - ${vid.title}\n┇๏ *Duration* - ${vid.timestamp}\n┇๏ *Views* - ${vid.views?.toLocaleString() || 'N/A'}\n┇๏ *Author* - ${vid.author?.name || 'Unknown'}\n┇๏ *Status* - Downloading...\n╰━━❑━⪼\n> Powered by KHAN-MD`
+            caption: `- *AUDIO DOWNLOADER 🎧*\n╭━━❐━⪼\n┇๏ *Title* - ${vid.title}\n┇๏ *Duration* - ${vid.timestamp}\n┇๏ *Views* - ${vid.views?.toLocaleString() || 'N/A'}\n┇๏ *Author* - ${vid.author?.name || 'Unknown'}\n┇๏ *Status* - Downloading...\n╰━━❑━⪼\n> Powered by JAWAD-MD`
         }, { quoted: mek });
 
         let audioUrl = null;
@@ -158,7 +158,7 @@ cmd({
 
         await conn.sendMessage(from, {
             image: { url: vid.thumbnail },
-            caption: `*🎬 VIDEO DOWNLOADER*\n\n🎞️ *Title:* ${vid.title}\n📺 *Channel:* ${vid.author?.name || 'Unknown'}\n🕒 *Duration:* ${vid.timestamp}\n\n*Status:* Downloading Video...\n\n> Powered by KHAN-MD`
+            caption: `*🎬 VIDEO DOWNLOADER*\n\n🎞️ *Title:* ${vid.title}\n📺 *Channel:* ${vid.author?.name || 'Unknown'}\n🕒 *Duration:* ${vid.timestamp}\n\n*Status:* Downloading Video...\n\n> Powered by JAWAD-MD`
         }, { quoted: mek });
 
         let videoUrl = null;
@@ -179,7 +179,7 @@ cmd({
                     if (videoUrl) {
                         await conn.sendMessage(from, {
                             video: { url: videoUrl },
-                            caption: `🎬 *${vid.title}*\n\n> Powered by KHAN-MD`
+                            caption: `🎬 *${vid.title}*\n\n> Powered by JAWAD-MD`
                         }, { quoted: mek });
                         success = true;
                         break;
@@ -252,7 +252,7 @@ cmd({
 *┋ ⬡ 4* 📄 ${toSmallCaps('Video as Document')}
 *╰───────────────────⊷*
 
-> Powered by KHAN-MD`;
+> Powered by JAWAD-MD`;
 
         const sent = await conn.sendMessage(from, {
             image: { url: vid.thumbnail },
@@ -305,7 +305,7 @@ cmd({
                                                 document: { url: audioUrl },
                                                 mimetype: "audio/mpeg",
                                                 fileName: `${vid.title}.mp3`,
-                                                caption: `📄 *${vid.title}*\n🎧 Audio Document\n\n> Powered by KHAN-MD`
+                                                caption: `📄 *${vid.title}*\n🎧 Audio Document\n\n> Powered by JAWAD-MD`
                                             }, { quoted: received });
                                         } else {
                                             // Send as audio
@@ -354,13 +354,13 @@ cmd({
                                                 document: { url: videoUrl },
                                                 mimetype: "video/mp4",
                                                 fileName: `${vid.title}.mp4`,
-                                                caption: `📄 *${vid.title}*\n📹 Video Document\n\n> Powered by KHAN-MD`
+                                                caption: `📄 *${vid.title}*\n📹 Video Document\n\n> Powered by JAWAD-MD`
                                             }, { quoted: received });
                                         } else {
                                             // Send as video
                                             await conn.sendMessage(from, {
                                                 video: { url: videoUrl },
-                                                caption: `🎬 *${vid.title}*\n\n> Powered by KHAN-MD`
+                                                caption: `🎬 *${vid.title}*\n\n> Powered by JAWAD-MD`
                                             }, { quoted: received });
                                         }
                                         success = true;
@@ -442,7 +442,7 @@ async (conn, mek, m, { from, text, reply }) => {
         });
 
         mesaj += `*╭───⬡ ${toSmallCaps('Powered By')} ⬡───*\n`;
-        mesaj += `*┋ ⬡ ${toSmallCaps('KHAN-MD')}*\n`;
+        mesaj += `*┋ ⬡ ${toSmallCaps('JAWAD-MD')}*\n`;
         mesaj += `*╰───────────────────⊷*`;
         
         await conn.sendMessage(from, { text: mesaj.trim() }, { quoted: mek });
