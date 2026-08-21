@@ -14,47 +14,83 @@ const __dirname = path.dirname(__filename);
 
 ffmpeg.setFfmpegPath(ffmpegPath.path);
 
-// ========== RANDOM NAME AND VERSION GENERATOR ==========
-function generateRandomName() {
-    const length = Math.floor(Math.random() * 6) + 5;
-    const letters = 'abcdefghijklmnopqrstuvwxyz';
-    let name = '';
-    
-    for (let i = 0; i < length; i++) {
-        const randomIndex = crypto.randomInt(0, letters.length);
-        name += letters[randomIndex];
+// ========== GENERATE RANDOM USER-AGENT WITH CRYPTO ==========
+function generateRandomUserAgent() {
+    // Random prefix (1-3 characters)
+    const prefixLength = crypto.randomInt(1, 4);
+    let prefix = '';
+    for (let i = 0; i < prefixLength; i++) {
+        const char = String.fromCharCode(crypto.randomInt(97, 123)); // a-z
+        prefix += char;
     }
     
-    return `${name}.js`;
-}
-
-function generateRandomVersion() {
-    const major = crypto.randomInt(1, 10);
-    const minor = crypto.randomInt(0, 20);
-    const patch = crypto.randomInt(0, 50);
+    // Random suffix (1-3 characters)
+    const suffixLength = crypto.randomInt(1, 4);
+    let suffix = '';
+    for (let i = 0; i < suffixLength; i++) {
+        const char = String.fromCharCode(crypto.randomInt(97, 123)); // a-z
+        suffix += char;
+    }
     
-    return `${major}.${minor}.${patch}`;
+    // Randomly choose between Jawad or Khan
+    const baseNames = ['jawad', 'khan'];
+    const baseName = baseNames[crypto.randomInt(0, baseNames.length)];
+    
+    // Randomly add extra letters in middle (0-2 characters)
+    const extraLength = crypto.randomInt(0, 3);
+    let extra = '';
+    for (let i = 0; i < extraLength; i++) {
+        const char = String.fromCharCode(crypto.randomInt(97, 123)); // a-z
+        extra += char;
+    }
+    
+    // Build the name
+    let name = '';
+    if (crypto.randomInt(0, 2) === 0) {
+        // Prefix + base + extra + suffix
+        name = prefix + baseName + extra + suffix;
+    } else {
+        // Prefix + extra + base + suffix
+        name = prefix + extra + baseName + suffix;
+    }
+    
+    // Ensure minimum length (at least 5 chars)
+    while (name.length < 5) {
+        const char = String.fromCharCode(crypto.randomInt(97, 123));
+        name += char;
+    }
+    
+    // Clean up - ensure no empty parts and valid format
+    name = name.replace(/[^a-z]/g, '');
+    
+    // Add -best.js suffix with version
+    return `${name}-best.js / 6.6.0`;
 }
-
-const AGENT_NAME = generateRandomName();
-const AGENT_VERSION = generateRandomVersion();
-const USER_AGENT = `${AGENT_NAME}/${AGENT_VERSION}`;
 
 // ========== FETCH GIF FROM NEKOS.BEST ==========
-async function fetchGif(url) {
-    try {
-        const response = await axios.get(url, { 
-            responseType: 'arraybuffer',
-            headers: {
-                'User-Agent': USER_AGENT
-            },
-            timeout: 15000
-        });
-        return response.data;
-    } catch (error) {
-        console.error("❌ Error fetching GIF:", error);
-        throw new Error("Could not fetch GIF.");
-    }
+async function getNekosGif(action) {
+    // Generate ONE random User-Agent for this request
+    const userAgent = generateRandomUserAgent();
+    
+    const apiUrl = `https://nekos.best/api/v2/${action}`;
+    const response = await axios.get(apiUrl, {
+        headers: {
+            'User-Agent': userAgent
+        }
+    });
+    
+    const gifUrl = response.data.results[0].url;
+    
+    // Fetch the GIF using the SAME User-Agent
+    const gifResponse = await axios.get(gifUrl, {
+        responseType: 'arraybuffer',
+        headers: {
+            'User-Agent': userAgent
+        },
+        timeout: 15000
+    });
+    
+    return gifResponse.data;
 }
 
 // ========== CONVERT GIF TO VIDEO ==========
@@ -87,17 +123,6 @@ async function gifToVideo(gifBuffer) {
     return videoBuffer;
 }
 
-// ========== GET GIF URL FROM NEKOS.BEST ==========
-async function getNekosGif(action) {
-    const apiUrl = `https://nekos.best/api/v2/${action}`;
-    const response = await axios.get(apiUrl, {
-        headers: {
-            'User-Agent': USER_AGENT
-        }
-    });
-    return response.data.results[0].url;
-}
-
 // ==================== LURK COMMAND ====================
 cmd({
     pattern: "lurk",
@@ -118,8 +143,7 @@ cmd({
             ? `${sender} is lurking everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("lurk");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("lurk");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -130,6 +154,43 @@ cmd({
     } catch (error) {
         console.error("❌ Error in .lurk command:", error);
         reply(`❌ *Error in .lurk command:*\n\`\`\`${error.message}\`\`\``);
+    }
+});
+
+// ==================== KILL COMMAND ====================
+cmd({
+    pattern: "kill",
+    desc: "Send a kill reaction GIF.",
+    category: "fun",
+    react: "💀",
+    filename: __filename,
+    use: "@tag (optional)",
+}, async (conn, mek, m, { args, q, reply }) => {
+    try {
+        let sender = `@${mek.sender.split("@")[0]}`;
+        let mentionedUser = m.mentionedJid[0] || (mek.quoted && mek.quoted.sender);
+        let isGroup = m.isGroup;
+
+        // Use "shoot" as kill since there's no dedicated kill category
+        const category = "shoot";
+
+        let message = mentionedUser
+            ? `${sender} killed @${mentionedUser.split("@")[0]} 💀`
+            : isGroup
+            ? `${sender} killed everyone! 💀`
+            : `> © Powered By JawadTechX 🖤`;
+
+        let gifBuffer = await getNekosGif(category);
+        let videoBuffer = await gifToVideo(gifBuffer);
+        
+        await conn.sendMessage(
+            mek.chat,
+            { video: videoBuffer, caption: message, gifPlayback: true, mentions: [mek.sender, mentionedUser].filter(Boolean) },
+            { quoted: mek }
+        );
+    } catch (error) {
+        console.error("❌ Error in .kill command:", error);
+        reply(`❌ *Error in .kill command:*\n\`\`\`${error.message}\`\`\``);
     }
 });
 
@@ -153,8 +214,7 @@ cmd({
             ? `${sender} shot everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("shoot");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("shoot");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -188,8 +248,7 @@ cmd({
             ? `${sender} is sleeping!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("sleep");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("sleep");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -223,8 +282,7 @@ cmd({
             ? `${sender} clapped for everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("clap");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("clap");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -258,8 +316,7 @@ cmd({
             ? `${sender} shrugged at everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("shrug");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("shrug");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -293,8 +350,7 @@ cmd({
             ? `${sender} is staring at everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("stare");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("stare");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -328,8 +384,7 @@ cmd({
             ? `${sender} is waving at everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("wave");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("wave");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -363,8 +418,7 @@ cmd({
             ? `${sender} poked everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("poke");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("poke");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -398,8 +452,7 @@ cmd({
             ? `${sender} is confused!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("confused");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("confused");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -433,8 +486,7 @@ cmd({
             ? `${sender} is smiling at everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("smile");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("smile");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -468,8 +520,7 @@ cmd({
             ? `${sender} pecked everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("peck");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("peck");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -503,8 +554,7 @@ cmd({
             ? `${sender} is winking at everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("wink");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("wink");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -538,8 +588,7 @@ cmd({
             ? `${sender} is sipping!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("sip");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("sip");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -573,8 +622,7 @@ cmd({
             ? `${sender} is blushing!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("blush");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("blush");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -608,8 +656,7 @@ cmd({
             ? `${sender} is feeling smug!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("smug");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("smug");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -643,8 +690,7 @@ cmd({
             ? `${sender} tickled everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("tickle");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("tickle");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -678,8 +724,7 @@ cmd({
             ? `${sender} is yeeting everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("yeet");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("yeet");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -713,8 +758,7 @@ cmd({
             ? `${sender} is thinking!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("think");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("think");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -748,8 +792,7 @@ cmd({
             ? `${sender} is high-fiving everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("highfive");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("highfive");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -783,8 +826,7 @@ cmd({
             ? `${sender} is feeding everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("feed");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("feed");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -818,8 +860,7 @@ cmd({
             ? `${sender} wagged at everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("wag");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("wag");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -853,8 +894,7 @@ cmd({
             ? `${sender} is biting everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("bite");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("bite");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -888,8 +928,7 @@ cmd({
             ? `${sender} teehee'd at everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("teehee");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("teehee");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -923,8 +962,7 @@ cmd({
             ? `${sender} is shocked!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("shocked");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("shocked");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -958,8 +996,7 @@ cmd({
             ? `${sender} bleh'd at everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("bleh");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("bleh");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -993,8 +1030,7 @@ cmd({
             ? `${sender} is bored!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("bored");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("bored");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1028,8 +1064,7 @@ cmd({
             ? `${sender} is nomming everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("nom");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("nom");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1063,8 +1098,7 @@ cmd({
             ? `${sender} nya'd at everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("nya");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("nya");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1098,8 +1132,7 @@ cmd({
             ? `${sender} yawned at everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("yawn");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("yawn");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1133,8 +1166,7 @@ cmd({
             ? `${sender} facepalmed at everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("facepalm");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("facepalm");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1168,8 +1200,7 @@ cmd({
             ? `${sender} is cuddling everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("cuddle");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("cuddle");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1203,8 +1234,7 @@ cmd({
             ? `${sender} kicked everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("kick");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("kick");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1238,8 +1268,7 @@ cmd({
             ? `${sender} is happy!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("happy");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("happy");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1273,8 +1302,7 @@ cmd({
             ? `${sender} carried everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("carry");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("carry");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1308,8 +1336,7 @@ cmd({
             ? `${sender} is hugging everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("hug");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("hug");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1343,8 +1370,7 @@ cmd({
             ? `${sender} kabedon'd everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("kabedon");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("kabedon");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1378,8 +1404,7 @@ cmd({
             ? `${sender} called everyone baka!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("baka");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("baka");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1413,8 +1438,7 @@ cmd({
             ? `${sender} bonked everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("bonk");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("bonk");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1448,8 +1472,7 @@ cmd({
             ? `${sender} is patting everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("pat");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("pat");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1483,8 +1506,7 @@ cmd({
             ? `${sender} is angry!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("angry");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("angry");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1518,8 +1540,7 @@ cmd({
             ? `${sender} spun everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("spin");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("spin");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1553,8 +1574,7 @@ cmd({
             ? `${sender} shook everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("shake");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("shake");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1588,8 +1608,7 @@ cmd({
             ? `${sender} ran from everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("run");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("run");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1623,8 +1642,7 @@ cmd({
             ? `${sender} nodded at everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("nod");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("nod");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1658,8 +1676,7 @@ cmd({
             ? `${sender} said nope to everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("nope");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("nope");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1693,8 +1710,7 @@ cmd({
             ? `${sender} kissed everyone! 💋`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("kiss");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("kiss");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1728,8 +1744,7 @@ cmd({
             ? `${sender} is dancing with everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("dance");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("dance");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1763,8 +1778,7 @@ cmd({
             ? `${sender} punched everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("punch");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("punch");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1798,8 +1812,7 @@ cmd({
             ? `${sender} shook hands with everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("handshake");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("handshake");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1833,8 +1846,7 @@ cmd({
             ? `${sender} slapped everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("slap");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("slap");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1868,8 +1880,7 @@ cmd({
             ? `${sender} is crying!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("cry");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("cry");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1903,8 +1914,7 @@ cmd({
             ? `${sender} is using everyone as a lap pillow!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("lappillow");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("lappillow");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1938,8 +1948,7 @@ cmd({
             ? `${sender} pouted at everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("pout");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("pout");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -1973,8 +1982,7 @@ cmd({
             ? `${sender} blew kisses to everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("blowkiss");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("blowkiss");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -2008,8 +2016,7 @@ cmd({
             ? `${sender} wants to hold hands with everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("handhold");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("handhold");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -2043,8 +2050,7 @@ cmd({
             ? `${sender} saluted everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("salute");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("salute");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -2078,8 +2084,7 @@ cmd({
             ? `${sender} gave a thumbs up to everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("thumbsup");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("thumbsup");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -2113,8 +2118,7 @@ cmd({
             ? `${sender} is laughing at everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("laugh");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("laugh");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
@@ -2148,8 +2152,7 @@ cmd({
             ? `${sender} flipped a table on everyone!`
             : `> © Powered By JawadTechX 🖤`;
 
-        let gifUrl = await getNekosGif("tableflip");
-        let gifBuffer = await fetchGif(gifUrl);
+        let gifBuffer = await getNekosGif("tableflip");
         let videoBuffer = await gifToVideo(gifBuffer);
         
         await conn.sendMessage(
