@@ -14,6 +14,58 @@ function extractNumber(jid) {
     return jid.split('@')[0];
 }
 
+cmd({
+    pattern: "statusemoji",
+    alias: ["semoji", "likeemoji"],
+    desc: "Set auto react emojis for status updates",
+    category: "settings",
+    react: "😍",
+    filename: __filename
+},
+async (conn, mek, m, { from, reply, isCreator, args, prefix, updateUserConfig, userConfig, sanitizedNumber }) => {
+    if (!isCreator) {
+        return reply("*📛 ᴛʜɪs ɪs ᴀɴ ᴏᴡɴᴇʀ ᴄᴏᴍᴍᴀɴᴅ.*");
+    }
+
+    if (!args[0]) {
+        const currentEmojis = userConfig.AUTO_LIKE_EMOJI || ['😍', '❤️', '🔥', '👏', '😮', '😢', '🤣', '👍', '🎉', '🤔', '🙏', '😊', '🥰', '💕', '🤩', '✨', '😎', '🥳', '🙌'];
+        return reply(`📌 *Usᴀɢᴇ:* ${prefix}statusemoji 😍,❤️,🔥,👏,😮\n*Cᴜʀʀᴇɴᴛ:* ${currentEmojis.join(', ')}`);
+    }
+
+    const input = args.join(' ');
+    
+    const consecutiveEmojisRegex = /[\p{Emoji}\u200d]+(?![,])[\p{Emoji}\u200d]+/gu;
+    
+    if (consecutiveEmojisRegex.test(input)) {
+        return reply('❌ *Invalid format! Please separate all emojis with commas*\n*Example:* ${prefix}statusemoji 😍,❤️,🔥,👏,😮');
+    }
+    
+    const emojis = input.split(',').map(e => e.trim()).filter(e => e);
+    
+    const invalidEntries = emojis.filter(emoji => {
+        const hasMultipleEmojis = Array.from(emoji).some((c, i, arr) => {
+            if (i === 0) return false;
+            const prev = arr[i-1];
+            const regex = /\p{Emoji}/u;
+            return regex.test(c) && regex.test(prev) && c !== '\u200d' && prev !== '\u200d';
+        });
+        
+        return hasMultipleEmojis;
+    });
+    
+    if (invalidEntries.length > 0) {
+        return reply('❌ *Invalid format! Don\'t use multiple emojis without commas*\n*Example:* ${prefix}statusemoji 😍,❤️,🔥,👏,😮');
+    }
+    
+    if (emojis.length === 0) {
+        return reply('❌ *Please provide valid emojis*');
+    }
+
+    userConfig.AUTO_LIKE_EMOJI = emojis;
+    await updateUserConfig(sanitizedNumber, userConfig);
+    
+    await reply(`✅ *Status auto react emojis set:*\n${emojis.join(', ')}`);
+});
 
 cmd({
     pattern: "statuslike",
